@@ -38,10 +38,14 @@ export const config = {
     },
 
     crypto: {
-        privateKey: process.env.LICENSE_PRIVATE_KEY || (() => {
+        privateKey: (() => {
+            const key = process.env.LICENSE_PRIVATE_KEY;
+            if (key) return key.replace(/\\n/g, '\n').replace(/\r/g, '').trim();
             try { return fs.readFileSync(path.join(__dirname, '../crypto/private_key.pem'), 'utf8'); } catch (e) { return ''; }
         })(),
-        publicKey: process.env.LICENSE_PUBLIC_KEY || (() => {
+        publicKey: (() => {
+            const key = process.env.LICENSE_PUBLIC_KEY;
+            if (key) return key.replace(/\\n/g, '\n').replace(/\r/g, '').trim();
             try { return fs.readFileSync(path.join(__dirname, '../crypto/public_key.pem'), 'utf8'); } catch (e) { return ''; }
         })(),
     },

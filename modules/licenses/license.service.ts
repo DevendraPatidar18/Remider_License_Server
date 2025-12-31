@@ -7,18 +7,31 @@ import { config } from '../../config';
 
 export class LicenseService {
     // Helper: Sign Data (Offline Validation)
+
     private signData(data: string): string {
         try {
-            const privateKey = config.crypto.privateKey;
-            const sign = crypto.createSign('SHA256');
-            sign.update(data);
+            const sign = crypto.createSign('RSA-SHA256');
+            sign.update(data, 'utf8');
             sign.end();
-            return sign.sign(privateKey, 'base64');
-        } catch (error) {
-            console.error('Signing Error:', error);
-            throw new Error('Failed to sign license data');
+
+            return sign.sign(
+                {
+                    key: config.crypto.privateKey,
+                    padding: crypto.constants.RSA_PKCS1_PADDING,
+                },
+                'base64'
+            );
+        } catch (err) {
+            console.error('RAW SIGN ERROR:', err);
+            console.error(
+                'KEY HEADER:',
+                config.crypto.privateKey?.split('\n')[0]
+            );
+            throw err; // IMPORTANT: rethrow raw error
         }
     }
+
+
 
     async createLicenseRequest(userId: string, deviceId: string) {
         // Check for pending request
