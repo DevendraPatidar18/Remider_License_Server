@@ -6,13 +6,13 @@ const authService = new AuthService();
 
 export const register = async (req: Request, res: Response) => {
     try {
-        const { phone, email, password } = req.body;
+        const { phone, email, password, userName } = req.body;
 
         if (!phone || !email || !password) {
             return res.status(400).json({ success: false, message: 'Missing required fields' });
         }
 
-        const user = await authService.createUser(phone, email, password);
+        const user = await authService.createUser(phone, email, password, userName);
         res.status(201).json({ success: true, data: user });
     } catch (error: any) {
         if (error.code === '23505') { // Unique violation
@@ -40,6 +40,70 @@ export const login = async (req: Request, res: Response) => {
         res.json({ success: true, data: result });
     } catch (error: any) {
         console.error('Login Error:', error);
+        if (error.message === 'User is blocked') {
+            return res.status(403).json({ success: false, message: 'User is blocked' });
+        }
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};
+
+export const extendExpiry = async (req: Request, res: Response) => {
+    try {
+        // Assuming auth middleware sets req.user
+        const userId = (req as any).user?.userId;
+        if (!userId) {
+            return res.status(401).json({ success: false, message: 'Unauthorized' });
+        }
+
+        const result = await authService.extendExpiry(userId);
+        res.json({ success: true, data: result });
+    } catch (error: any) {
+        console.error('Extend Expiry Error:', error);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};
+
+export const adminRegister = async (req: Request, res: Response) => {
+    try {
+        const { phone, email, password, userName } = req.body;
+
+        if (!phone || !email || !password) {
+            return res.status(400).json({ success: false, message: 'Missing required fields' });
+        }
+
+        // Force 'admin' role
+        const user = await authService.createUser(phone, email, password, userName, 'admin');
+        res.status(201).json({ success: true, data: user });
+    } catch (error: any) {
+        if (error.code === '23505') { // Unique violation
+            return res.status(409).json({ success: false, message: 'User already exists' });
+        }
+        console.error('Admin Register Error:', error);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};
+
+export const adminLogin = async (req: Request, res: Response) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ success: false, message: 'Missing credentials' });
+        }
+
+        const result = await authService.validateUser(email, password);
+
+        if (!result) {
+            return res.status(401).json({ success: false, message: 'Invalid credentials' });
+        }
+
+        if (result.user.role !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Access denied: Admins only' });
+        }
+
+        res.json({ success: true, data: result });
+    } catch (error: any) {
+        console.error('Admin Login Error:', error);
         if (error.message === 'User is blocked') {
             return res.status(403).json({ success: false, message: 'User is blocked' });
         }

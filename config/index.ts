@@ -34,7 +34,7 @@ export const config = {
 
     jwt: {
         secret: process.env.JWT_SECRET || 'super-secret-key-change-this',
-        expiresIn: '1h',
+        expiresIn: '180d',
     },
 
     crypto: {

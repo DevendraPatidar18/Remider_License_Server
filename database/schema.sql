@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS users (
   phone VARCHAR UNIQUE NOT NULL,
   email VARCHAR UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
+  user_name VARCHAR(255),
+  role VARCHAR(20) CHECK (role IN ('user', 'admin')) DEFAULT 'user',
   status VARCHAR(20) CHECK (status IN ('active', 'blocked')) DEFAULT 'active',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

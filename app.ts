@@ -6,6 +6,7 @@ import { config } from './config';
 
 // Import Routes (will be created later)
 import authRoutes from './modules/auth/auth.routes';
+import userRoutes from './modules/user/user.routes';
 import deviceRoutes from './modules/devices/device.routes';
 import licenseRoutes from './modules/licenses/license.routes';
 import transferRoutes from './modules/transfers/transfer.routes';
@@ -25,6 +26,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/auth', authRoutes);
+app.use('/users', userRoutes);
 app.use('/devices', deviceRoutes);
 app.use('/license', licenseRoutes);
 app.use('/transfers', transferRoutes);
