@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS licenses (
   device_id UUID REFERENCES devices(id) ON DELETE CASCADE,
   license_key TEXT UNIQUE NOT NULL,
   signed_payload TEXT NOT NULL,
-  status VARCHAR(20) CHECK (status IN ('active', 'revoked', 'expired')) DEFAULT 'active',
+  status VARCHAR(20) CHECK (status IN ('active', 'inactive')) DEFAULT 'active',
   issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   expires_at TIMESTAMP NOT NULL,
   transfer_count INT DEFAULT 0

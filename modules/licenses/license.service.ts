@@ -61,27 +61,33 @@ export class LicenseService {
 
         if (request.status !== 'pending') throw new Error('Request is not pending');
 
-        // 2. Generate License Key
+        // 2. Fetch Device Info (Fingerprint)
+        const deviceResult = await query('SELECT device_fingerprint FROM devices WHERE id = $1', [request.device_id]);
+        if (deviceResult.rows.length === 0) throw new Error('Device not found');
+        const deviceFingerprint = deviceResult.rows[0].device_fingerprint;
+
+        // 3. Generate License Key
         const licenseKey = crypto.randomBytes(16).toString('hex').toUpperCase();
 
-        // 3. Create Payload for Offline Validation (Device ID + Expiry + License Key)
+        // 4. Create Payload for Offline Validation (Device ID + Fingerprint + Expiry + License Key)
         // Set expiry to 1 year from now for example
         const expiresAt = new Date();
         expiresAt.setFullYear(expiresAt.getFullYear() + 1);
 
         const payloadObj = {
             deviceId: request.device_id,
+            deviceFingerprint, // Bind fingerprint to payload
             licenseKey,
             expiresAt: expiresAt.toISOString(),
             type: 'pro', // example
         };
         const payloadStr = JSON.stringify(payloadObj);
 
-        // 4. Sign Payload
+        // 5. Sign Payload
         const signature = this.signData(payloadStr);
         const signedPayload = JSON.stringify({ data: payloadObj, signature });
 
-        // 5. Create License Record
+        // 6. Create License Record
         const licText = `
             INSERT INTO licenses (user_id, device_id, license_key, signed_payload, expires_at)
             VALUES ($1, $2, $3, $4, $5)
@@ -95,7 +101,7 @@ export class LicenseService {
             expiresAt
         ]);
 
-        // 6. Update Request Status
+        // 7. Update Request Status
         await query('UPDATE license_requests SET status = \'approved\', reviewed_at = NOW() WHERE id = $1', [requestId]);
 
         return license.rows[0];
