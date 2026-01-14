@@ -9,8 +9,8 @@ const pool = new Pool({
 });
 
 pool.on('error', (err) => {
-    console.error('Unexpected error on idle client', err);
-    process.exit(-1);
+    console.error('Unexpected error on idle client. Client will be removed from pool.', err);
+    // process.exit(-1); // Do not exit process on idle client error
 });
 
 export const query = (text: string, params?: any[]) => pool.query(text, params);

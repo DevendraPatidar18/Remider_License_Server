@@ -78,3 +78,48 @@ export const getUserById = async (req: AuthRequest, res: Response) => {
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 };
+
+export const removeLicense = async (req: AuthRequest, res: Response) => {
+    try {
+        const { licenseId } = req.params;
+        const result = await query('DELETE FROM licenses WHERE id = $1 RETURNING id', [licenseId]);
+
+        if (result.rowCount === 0) {
+            res.status(404).json({ success: false, message: 'License not found' });
+            return;
+        }
+
+        res.json({ success: true, message: 'License removed successfully' });
+    } catch (error) {
+        console.error('Admin Remove License Error:', error);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};
+
+export const renewLicense = async (req: AuthRequest, res: Response) => {
+    try {
+        const { licenseId } = req.params;
+        const { months } = req.body;
+
+        if (!months || typeof months !== 'number') {
+            res.status(400).json({ success: false, message: 'Invalid months value' });
+            return;
+        }
+
+        // Use Postgres make_interval to safely add months
+        const result = await query(
+            'UPDATE licenses SET expires_at = expires_at + make_interval(months => $1) WHERE id = $2 RETURNING *',
+            [months, licenseId]
+        );
+
+        if (result.rowCount === 0) {
+            res.status(404).json({ success: false, message: 'License not found' });
+            return;
+        }
+
+        res.json({ success: true, message: 'License renewed successfully', data: result.rows[0] });
+    } catch (error) {
+        console.error('Admin Renew License Error:', error);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};

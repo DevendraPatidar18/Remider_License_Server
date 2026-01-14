@@ -12,5 +12,7 @@ router.get('/licenses', authenticate, adminController.getAllLicenses);
 router.get('/transfers', authenticate, adminController.getAllTransfers);
 router.get('/users', authenticate, adminController.getAllUsers);
 router.get('/users/:userId', authenticate, adminController.getUserById);
+router.delete('/licenses/:licenseId', authenticate, adminController.removeLicense);
+router.post('/licenses/:licenseId/renew', authenticate, adminController.renewLicense);
 
 export default router;
