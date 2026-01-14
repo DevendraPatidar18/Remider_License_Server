@@ -10,5 +10,7 @@ const router = Router();
 router.get('/requests/pending', authenticate, adminController.getPendingRequests);
 router.get('/licenses', authenticate, adminController.getAllLicenses);
 router.get('/transfers', authenticate, adminController.getAllTransfers);
+router.get('/users', authenticate, adminController.getAllUsers);
+router.get('/users/:userId', authenticate, adminController.getUserById);
 
 export default router;
