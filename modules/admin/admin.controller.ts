@@ -55,8 +55,51 @@ export const getAllTransfers = async (req: AuthRequest, res: Response) => {
 
 export const getAllUsers = async (req: AuthRequest, res: Response) => {
     try {
-        const result = await query('SELECT id, phone, email, user_name, role, status, created_at FROM users');
-        res.json({ success: true, count: result.rows.length, data: result.rows });
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 10;
+        const search = req.query.search as string;
+        const offset = (page - 1) * limit;
+
+        let queryText = `
+            SELECT id, phone, email, user_name, role, status, created_at 
+            FROM users 
+            WHERE role = 'user'
+        `;
+        let countQueryText = `SELECT COUNT(*) FROM users WHERE role = 'user'`;
+
+        const queryParams: any[] = [];
+        let paramCounter = 1;
+
+        if (search) {
+            const searchClause = ` AND (user_name ILIKE $${paramCounter} OR email ILIKE $${paramCounter})`;
+            queryText += searchClause;
+            countQueryText += searchClause;
+            queryParams.push(`%${search}%`);
+            paramCounter++;
+        }
+
+        // Add pagination
+        queryText += ` ORDER BY created_at DESC LIMIT $${paramCounter} OFFSET $${paramCounter + 1}`;
+        const dataParams = [...queryParams, limit, offset];
+
+        const [usersResult, countResult] = await Promise.all([
+            query(queryText, dataParams),
+            query(countQueryText, queryParams)
+        ]);
+
+        const total = parseInt(countResult.rows[0].count);
+        const totalPages = Math.ceil(total / limit);
+
+        res.json({
+            success: true,
+            data: usersResult.rows,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages
+            }
+        });
     } catch (error) {
         console.error('Admin All Users Error:', error);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
