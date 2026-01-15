@@ -112,4 +112,51 @@ export class LicenseService {
         const result = await query(text, [userId]);
         return result.rows;
     }
+
+    async renewLicense(licenseId: string, months: number) {
+        // 1. Fetch License & Device Info
+        const licenseQuery = `
+            SELECT l.*, d.device_fingerprint 
+            FROM licenses l
+            LEFT JOIN devices d ON l.device_id = d.id
+            WHERE l.id = $1
+        `;
+        const licenseResult = await query(licenseQuery, [licenseId]);
+
+        if (licenseResult.rows.length === 0) {
+            throw new Error('License not found');
+        }
+
+        const license = licenseResult.rows[0];
+
+        // 2. Calculate New Expiry
+        const currentExpiresAt = new Date(license.expires_at);
+        const newExpiresAt = new Date(currentExpiresAt);
+        newExpiresAt.setMonth(newExpiresAt.getMonth() + months);
+
+        // 3. Create New Payload
+        const payloadObj = {
+            deviceId: license.device_id,
+            deviceFingerprint: license.device_fingerprint,
+            licenseKey: license.license_key,
+            expiresAt: newExpiresAt.toISOString(),
+            type: 'pro', // Maintain type if available in DB, else default
+        };
+        const payloadStr = JSON.stringify(payloadObj);
+
+        // 4. Sign Payload
+        const signature = this.signData(payloadStr);
+        const signedPayload = JSON.stringify({ data: payloadObj, signature });
+
+        // 5. Update License
+        const updateQuery = `
+            UPDATE licenses 
+            SET expires_at = $1, signed_payload = $2 
+            WHERE id = $3 
+            RETURNING *
+        `;
+        const result = await query(updateQuery, [newExpiresAt, signedPayload, licenseId]);
+
+        return result.rows[0];
+    }
 }

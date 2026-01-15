@@ -2,6 +2,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../../middleware/auth.middleware';
 import { query } from '../../database/db';
+import { LicenseService } from '../licenses/license.service';
 
 export const getPendingRequests = async (req: AuthRequest, res: Response) => {
     try {
@@ -106,20 +107,16 @@ export const renewLicense = async (req: AuthRequest, res: Response) => {
             return;
         }
 
-        // Use Postgres make_interval to safely add months
-        const result = await query(
-            'UPDATE licenses SET expires_at = expires_at + make_interval(months => $1) WHERE id = $2 RETURNING *',
-            [months, licenseId]
-        );
+        const licenseService = new LicenseService();
+        const updatedLicense = await licenseService.renewLicense(licenseId, months);
 
-        if (result.rowCount === 0) {
-            res.status(404).json({ success: false, message: 'License not found' });
-            return;
-        }
-
-        res.json({ success: true, message: 'License renewed successfully', data: result.rows[0] });
-    } catch (error) {
+        res.json({ success: true, message: 'License renewed successfully', data: updatedLicense });
+    } catch (error: any) {
         console.error('Admin Renew License Error:', error);
-        res.status(500).json({ success: false, message: 'Internal Server Error' });
+        if (error.message === 'License not found') {
+            res.status(404).json({ success: false, message: 'License not found' });
+        } else {
+            res.status(500).json({ success: false, message: 'Internal Server Error' });
+        }
     }
 };
