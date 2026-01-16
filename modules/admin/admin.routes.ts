@@ -15,4 +15,8 @@ router.get('/users/:userId', authenticate, adminController.getUserById);
 router.delete('/licenses/:licenseId', authenticate, adminController.removeLicense);
 router.post('/licenses/:licenseId/renew', authenticate, adminController.renewLicense);
 
+// App Management
+router.post('/apps', authenticate, adminController.registerNewApp);
+router.put('/apps/:appId', authenticate, adminController.updateApp);
+
 export default router;

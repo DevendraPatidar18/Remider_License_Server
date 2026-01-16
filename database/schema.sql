@@ -57,3 +57,14 @@ CREATE TABLE IF NOT EXISTS license_transfers (
   requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   approved_at TIMESTAMP
 );
+
+-- Applications Table
+CREATE TABLE IF NOT EXISTS applications (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  app_id VARCHAR UNIQUE NOT NULL,
+  name VARCHAR NOT NULL,
+  description TEXT,
+  version VARCHAR NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

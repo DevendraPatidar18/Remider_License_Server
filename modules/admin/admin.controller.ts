@@ -163,3 +163,82 @@ export const renewLicense = async (req: AuthRequest, res: Response) => {
         }
     }
 };
+
+export const registerNewApp = async (req: AuthRequest, res: Response) => {
+    try {
+        const { appName, appDescription, version, appId } = req.body;
+
+        if (!appName || !version || !appId) {
+            res.status(400).json({ success: false, message: 'Missing required fields: appName, version, appId' });
+            return;
+        }
+
+        const queryText = `
+            INSERT INTO applications (app_id, name, description, version)
+            VALUES ($1, $2, $3, $4)
+            RETURNING *
+        `;
+        const result = await query(queryText, [appId, appName, appDescription, version]);
+
+        res.json({ success: true, message: 'App registered successfully', data: result.rows[0] });
+    } catch (error: any) {
+        console.error('Admin Register App Error:', error);
+        if (error.code === '23505') { // Unique violation
+            res.status(409).json({ success: false, message: 'App ID already exists' });
+        } else {
+            res.status(500).json({ success: false, message: 'Internal Server Error' });
+        }
+    }
+};
+
+export const updateApp = async (req: AuthRequest, res: Response) => {
+    try {
+        const { appId } = req.params; // Currently assumes passing internal UUID or app_id? User said "app id". I will use the unique string app_id for lookup or the UUID if passed. 
+        // User request: "For update registere app... 4.version.(required)"
+        // Let's assume URL parameter is the unique 'app_id' string or the UUID.
+        // Given routes: /apps/:appId.
+        // I will assume it's the `app_id` string from the user request since they provided "app id" in registration.
+        // However, standard REST usually uses the ID. I'll support looking up by `app_id` string column if possible, or just the UUID. 
+        // Let's stick to the unique `app_id` column as the identifier in the URL for better UX, or UUID. 
+        // Note: The schema I added uses `id` (UUID) and `app_id` (String).
+        // I'll try to update by `app_id` string first as it's more likely what the user means (e.g. com.example.app).
+
+        const { appName, appDescription, version } = req.body;
+
+        if (!version) {
+            res.status(400).json({ success: false, message: 'Version is required' });
+            return;
+        }
+
+        let queryText = 'UPDATE applications SET version = $1, updated_at = NOW()';
+        let queryParams: any[] = [version];
+        let paramCounter = 2;
+
+        if (appName) {
+            queryText += `, name = $${paramCounter}`;
+            queryParams.push(appName);
+            paramCounter++;
+        }
+
+        if (appDescription) {
+            queryText += `, description = $${paramCounter}`;
+            queryParams.push(appDescription);
+            paramCounter++;
+        }
+
+        queryText += ` WHERE app_id = $${paramCounter} RETURNING *`;
+        queryParams.push(appId);
+
+        const result = await query(queryText, queryParams);
+
+        if (result.rowCount === 0) {
+            res.status(404).json({ success: false, message: 'App not found' });
+            return;
+        }
+
+        res.json({ success: true, message: 'App updated successfully', data: result.rows[0] });
+    } catch (error) {
+        console.error('Admin Update App Error:', error);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};
