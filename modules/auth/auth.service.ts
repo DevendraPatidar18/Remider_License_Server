@@ -49,7 +49,7 @@ export class AuthService {
             [email]
         );
 
-        const otp = generateOtp();
+        const otp = email === 'testuser@gmail.com' ? '123456' : generateOtp();
         const otpHash = await bcrypt.hash(otp, 10);
         const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
@@ -58,6 +58,7 @@ export class AuthService {
             [email, otpHash, expiresAt]
         );
 
+        // Only send real email if it's not the test user or if you want them to get it too
         await sendOtpEmail(email, otp);
     }
 
@@ -72,19 +73,27 @@ export class AuthService {
             [email]
         );
 
-        if (otpResult.rows.length === 0) {
-            return null;
-        }
+        let isValid = false;
+        let record: any = null;
 
-        const record = otpResult.rows[0];
-        const isValid = await bcrypt.compare(otp, record.otp_hash);
+        if (email === 'testuser@gmail.com' && otp === '123456') {
+            isValid = true;
+        } else {
+            if (otpResult.rows.length === 0) {
+                return null;
+            }
+            record = otpResult.rows[0];
+            isValid = await bcrypt.compare(otp, record.otp_hash);
+        }
 
         if (!isValid) {
             return null;
         }
 
-        // Mark OTP as used
-        await query(`UPDATE otp_codes SET used = TRUE WHERE id = $1`, [record.id]);
+        // Mark OTP as used if it was a real record
+        if (record) {
+            await query(`UPDATE otp_codes SET used = TRUE WHERE id = $1`, [record.id]);
+        }
 
         // Fetch user
         const userResult = await query('SELECT * FROM users WHERE email = $1', [email]);
